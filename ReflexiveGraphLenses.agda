@@ -1,23 +1,27 @@
 {-# OPTIONS --cubical #-}
 module ReflexiveGraphLenses where
 
-import Agda.Builtin.Cubical.Path               as Path
-import Cubical.Foundations.Prelude             as Prelude
-
+import Agda.Builtin.Cubical.Path as Path
+import Cubical.Foundations.Prelude as Prelude
 open Path using (PathP) public
-open Prelude using (_≡_ ; refl ; cong ; funExt
-                        ; transport ; subst ; J; isSet) public
-open import Agda.Primitive
- renaming (Set to Type; Setω to Typeω; Level to Universe)
- public
-
+open Prelude using (_≡_ ; refl ; cong ; funExt; transport ; subst ; J; isSet) public
+open import Agda.Primitive renaming (Set to Type; Setω to Typeω; Level to Universe)  public
 open import Agda.Builtin.Sigma public
 open import Agda.Builtin.Unit renaming (⊤ to Unit) public
 open import Agda.Builtin.Nat renaming (Nat to ℕ) public
+open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.Equiv
+open import Cubical.Foundations.Isomorphism
+open import Cubical.Foundations.Univalence
+open import Cubical.Foundations.Prelude
+open import Cubical.Foundations.HLevels
+open import Cubical.Relation.Binary
+open import Cubical.Displayed.Base
+open import Cubical.Displayed.Subst
 
 private
  variable
-  𝓤 𝓥 𝓦 ℓ : Universe
+  𝓤 𝓥 𝓦 ℓ ℓ' 𝓤' 𝓥' : Universe
 
 Π : (A : Type 𝓤) (B : A → Type 𝓥) → Type (𝓤 ⊔ 𝓥)
 Π A B = (x : A) → B x
@@ -39,216 +43,51 @@ _∘_
 
 infixl 10 _∘_
 
-record is-contr {ℓ} (A : Type ℓ) : Type ℓ where
-  constructor contr
-  field
-    centre : A
-    paths  : (x : A) → centre ≡ x
+open import Cubical.Foundations.Prelude
+-- We cannot define this using Jon's definition of reflexive graphs
+𝒮-Univ : ∀ ℓ → UARel (Type ℓ) ℓ
+𝒮-Univ ℓ .UARel._≅_ = _≃_
+𝒮-Univ ℓ .UARel.ua _ _ = isoToEquiv (invIso univalenceIso)
 
-is-prop : {𝓤 : Universe} (A : Type 𝓤) → Type 𝓤
-is-prop A = (x y : A) → x ≡ y
+ -- The type of sets.
+HSet : ∀ ℓ → Type (lsuc ℓ)
+HSet ℓ = Σ (Type ℓ) isSet
 
-record reflexive-graph 𝓤 𝓤' : Type (lsuc (𝓤 ⊔ 𝓤')) where
- constructor make-reflexive-graph
- field
-  tp : Type 𝓤
-  edge : tp → tp → Type 𝓤'
-  rx : (x : tp) → edge x x
+𝒮-Set : ∀ ℓ → UARel (Σ (Type ℓ) isSet) (ℓ-suc ℓ)
+(𝒮-Set ℓ UARel.≅ A) B = fst A ≡ fst B
+fst (UARel.ua (𝒮-Set ℓ) Ha Hb) x = {!!}
+snd (UARel.ua (𝒮-Set ℓ) Ha Hb) = {!!}
 
- _≈_ = edge
-
- edges : Type (𝓤 ⊔ 𝓤')
- edges = Σ tp λ x → Σ tp λ y → edge x y
-
- ⟨_⟩+ : tp → Type (𝓤 ⊔ 𝓤')
- ⟨ x ⟩+ = Σ tp (x ≈_)
-
- ⟨_⟩- : tp → Type (𝓤 ⊔ 𝓤')
- ⟨ x ⟩- = Σ tp (_≈ x)
-
- ⟪_⟫+ : (x : tp) → ⟨ x ⟩+
- ⟪ x ⟫+ = x , rx x
-
- ⟪_⟫- : (x : tp) → ⟨ x ⟩-
- ⟪ x ⟫- = x , rx x
-
- is-univalent : Type (𝓤 ⊔ 𝓤')
- is-univalent = (x : tp) → is-prop ⟨ x ⟩+
-
- unext : {x y : tp} → x ≡ y → x ≈ y
- unext {x} {y} p = transport ((λ i → edge x (p i))) ((rx x))
-
-record
-  is-identity-system {ℓ ℓ'} {A : Type ℓ}
-    (R : A → A → Type ℓ')
-    (refl : ∀ a → R a a)
-    : Type (ℓ ⊔ ℓ')
+𝒮ᴰ-Set : ∀ ℓ → DUARel (𝒮-Univ ℓ) (λ X → isSet X) ℓ
+DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-Set ℓ) x p y = PathP (λ i → isSet (UARel.≅→≡ (𝒮-Univ ℓ) p i)) x y
+DUARel.uaᴰ (𝒮ᴰ-Set ℓ) b p b' = isProp→PathP (λ i → {!(isPropIsSet' (UARel.≅→≡ (𝒮-Univ ℓ) p i))!}) b b' {!i!}
   where
-  no-eta-equality
-  field
-    to-path      : ∀ {a b} → R a b → a ≡ b
-    to-path-over : ∀ {a b} (p : R a b)
-                   → PathP (λ i → R a (to-path p i)) (refl a) p
+    isPropIsSet' : ∀ {ℓ} (A : Type ℓ) → isProp (isSet A)
+    isPropIsSet' A = isPropΠ2 λ x y → isPropIsProp
 
-  is-contr-ΣR : ∀ {a} → is-contr (Σ A (R a))
-  is-contr-ΣR .is-contr.centre    = _ , refl _
-  is-contr-ΣR .is-contr.paths x i = to-path (x .snd) i , to-path-over (x .snd) i
+∫𝓢ᴰ-Set : ∀ ℓ → UARel (Σ (Type ℓ) isSet) ℓ
+∫𝓢ᴰ-Set ℓ = ∫ (𝒮ᴰ-Set ℓ)
 
-set-identity-system : ∀ {ℓ ℓ'} {A : Type ℓ} {R : A → A → Type ℓ'} {r : ∀ x → R x x}
-                      → (∀ x y → is-prop (R x y))
-                      → (∀ {x y} → R x y → x ≡ y)
-                      → is-identity-system R r
-set-identity-system rprop rpath .is-identity-system.to-path = rpath
-set-identity-system rprop rpath .is-identity-system.to-path-over p =
-  Prelude.isProp→PathP (λ i → rprop _ _) _ p
+𝒮ᴰ-PtdSet : ∀ ℓ → DUARel (∫𝓢ᴰ-Set ℓ) (λ X → (fst X)) ℓ
+(𝒮ᴰ-PtdSet ℓ DUARel.≅ᴰ⟨ x ⟩ p) y = (fst (fst p)) x ≡ y
+DUARel.uaᴰ (𝒮ᴰ-PtdSet ℓ) = {!!}
 
-set-rg : ∀ {ℓ ℓ'} {A : Type ℓ} {R : A → A → Type ℓ'} {r : ∀ x → R x x}
-         → (∀ x y → is-prop (R x y))
-         → (∀ {x y} → R x y → x ≡ y)
-         → reflexive-graph ℓ ℓ'
-reflexive-graph.tp (set-rg {ℓ} {ℓ'} {A} x x₁) = A
-reflexive-graph.edge (set-rg {ℓ} {ℓ'} {A} {R} x x₁) = R
-reflexive-graph.rx (set-rg {ℓ} {ℓ'} {A} {R} {r} x x₁) = λ x → r x
+𝒮ᴰ-PtdTyp : ∀ ℓ → DUARel (𝒮-Univ ℓ) (λ X → X) ℓ
+DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-PtdTyp ℓ) x e y = (fst e) x ≡ y
+DUARel.uaᴰ (𝒮ᴰ-PtdTyp ℓ) b p b' = {!!}
 
-open import Cubical.Data.Unit
-open import Cubical.Data.Empty
-
--- Observational Equality for ℕ.
-Eq-ℕ : ℕ → ℕ → Type
-Eq-ℕ zero zero = Unit
-Eq-ℕ zero (suc x) = ⊥
-Eq-ℕ (suc x) zero = ⊥
-Eq-ℕ (suc x) (suc y) = Eq-ℕ x y
--- Reflexivity datum.
-refl-Eq-ℕ : (m : ℕ) → Eq-ℕ m m
-refl-Eq-ℕ zero = tt
-refl-Eq-ℕ (suc m) = refl-Eq-ℕ m
-
--- ℕ-identity-system
---   : (∀ x y → is-prop (Eq-ℕ x y))
---   → (∀ {x y} → Eq-ℕ x y → x ≡ y)
---   → is-identity-system Eq-ℕ refl-Eq-ℕ
--- is-identity-system.to-path (ℕ-identity-system rprop rpath) = rpath
--- is-identity-system.to-path-over (ℕ-identity-system rprop rpath) = λ p → Prelude.isProp→PathP (λ i → rprop _ _) _ p
-
-ℕ-rg = make-reflexive-graph ℕ Eq-ℕ refl-Eq-ℕ
+𝒮ᴰ-Magma : ∀ ℓ → DUARel (∫𝓢ᴰ-Set ℓ) (λ X → (fst X) → (fst X) → (fst X)) ℓ
+DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-Magma ℓ) {a} ∘ₐ p ∘ₓ = ∀ (x y : fst a) → fst (fst p) (∘ₐ x y) ≡ ∘ₓ ((fst (fst p)) x) ((fst (fst p)) y)
+DUARel.uaᴰ (𝒮ᴰ-Magma ℓ) = {!!}
 
 
-isMonoid : (C : Type ℓ) → (C → C → C) → C → Type ℓ
-isMonoid C _∙_ id =
-  -- C is a set.
-  isSet C ×
-  -- Left and right identity laws.
-  (∀ x → id ∙ x ≡ x) ×
-  (∀ x → x ∙ id ≡ x) ×
-  -- Associativity.
-  (∀ x y z → x ∙ (y ∙ z) ≡ (x ∙ y) ∙ z)
+-- 𝒮-PtdSet : ∀ ℓ → DUARel (𝒮-Set ℓ) (λ X → fst X) (ℓ-suc ℓ)
+-- (𝒮-PtdSet ℓ DUARel.≅ᴰ⟨ A ⟩ A≃B) B = transport {!A≃B!} {!!}
+-- DUARel.uaᴰ (𝒮-PtdSet ℓ) = {!!}
 
--- Monoids (on sets).
-Monoid : {ℓ : Universe} → (Type (lsuc ℓ))
-Monoid {ℓ} =
-  -- Carrier.
-  Σ (Type ℓ) λ C →
-  -- Binary operation.
-  Σ (C → C → C) λ _∙_ →
-  -- Identity.
-  Σ C λ id →
-  -- Laws.
-  isMonoid C _∙_ id
-
--- The carrier type.
-Carrier : Monoid → Type ℓ
-Carrier M = fst M
-
--- The binary operation.
-op : (M : Monoid {ℓ}) → Carrier M → Carrier M → Carrier M
-op M = fst (snd M)
-
--- The identity element.
-id : (M : Monoid {ℓ}) → Carrier M
-id M = fst (snd (snd M))
-
--- The monoid laws.
-laws : (M : Monoid {ℓ}) → isMonoid (Carrier M) (op M) (id M)
-laws M = snd (snd (snd M))
-
--- Monoid morphisms.
-isMonoidHomomorphism : (M₁ M₂ : Monoid) → (Carrier M₁ → Carrier M₂) → Type ℓ
-isMonoidHomomorphism M₁ M₂ f = (∀ x y → f (op M₁ x y) ≡ op M₂ (f x) (f y)) × (f (id M₁) ≡ id M₂)
-
--- Monoid isomorphisms.
-import Cubical.Foundations.Equiv as Equivalences
-open Equivalences using (_≃_)
-
-_≅_ : {ℓ : Universe} → Monoid {ℓ} → Monoid {ℓ} → Type ℓ
-M₁ ≅ M₂ = Σ (Carrier M₁ ≃ Carrier M₂) λ f → isMonoidHomomorphism M₁ M₂ (fst f)
-
-refl-≅ : (m : Monoid {ℓ}) → m ≅ m
-refl-≅ m = (reflexive-graph.rx ? ?) , {!!}
-
--- monoid-rg
---   : ∀ {ℓ ℓ'} {A : Monoid} {r : ∀ x → x ≅ x}
---   → (∀ x y → is-prop (x ≅ y))
---   → (∀ {x y} → x ≅ y → x ≡ y)
---   → reflexive-graph (lsuc lzero) ℓ
--- reflexive-graph.tp (monoid-rg {ℓ} {ℓ'} {A} x x₁) = Monoid
--- reflexive-graph.edge (monoid-rg {ℓ} {ℓ'} {A} {R} x x₁) = λ M N → M ≅ N
--- reflexive-graph.rx (monoid-rg {ℓ} {ℓ'} {A} {r} x x₁) = λ x → r x
-
-monoidrg = make-reflexive-graph Monoid ((λ M N → M ≅ N)) refl-≅
-
--- record Monoid {ℓ} : Type (lsuc ℓ) where
---   field S   : Type ℓ
---         ε   : S
---         _•_ : S → S → S
---         lid : ∀{m} → ε • m ≡ m
---         rid : ∀{m} → m • ε ≡ m
---         ass : ∀{m n o} → (m • n) • o ≡ m • (n • o)
-
--- Monoid-rg = make-reflexive-graph Monoid {!!} {!!}
-
-record path-object 𝓤 𝓤' : Type (lsuc (𝓤 ⊔ 𝓤')) where
- constructor make-path-object
- field
-  tp : Type 𝓤
-  edge : tp → tp → Type 𝓤'
-  rx : (x : tp) → edge x x
-
- to-rx-gph : reflexive-graph 𝓤 𝓤'
- to-rx-gph = make-reflexive-graph tp edge rx
-
-module _ {𝓤 𝓤'} (𝓐 : reflexive-graph 𝓤 𝓤') where
- private module 𝓐 = reflexive-graph 𝓐
-
- family-of-reflexive-graphs : (𝓥 𝓥' : Universe) → Type (𝓤 ⊔ lsuc (𝓥 ⊔ 𝓥'))
- family-of-reflexive-graphs 𝓥 𝓥' = 𝓐.tp → reflexive-graph 𝓥 𝓥'
-
- family-of-path-objects : (𝓥 𝓥' : Universe) → Type (𝓤 ⊔ lsuc (𝓥 ⊔ 𝓥'))
- family-of-path-objects 𝓥 𝓥' = 𝓐.tp → path-object 𝓥 𝓥'
-
- module family-of-reflexive-graphs {𝓥 𝓥'} (𝓑 : family-of-reflexive-graphs 𝓥 𝓥') where
-  module _ (x : 𝓐.tp) where
-   open reflexive-graph (𝓑 x) public using (tp)
-  module _ {x : 𝓐.tp} where
-   open reflexive-graph (𝓑 x) public hiding (tp)
-
-record oplax-covariant-lens {𝓤 𝓤' 𝓥 𝓥'} (𝓐 : reflexive-graph 𝓤 𝓤') (𝓑 : family-of-reflexive-graphs 𝓐 𝓥 𝓥') : Type (𝓤 ⊔ 𝓤' ⊔ 𝓥 ⊔ 𝓥') where
- constructor make-oplax-covariant-lens
- private
-  module 𝓐 = reflexive-graph 𝓐
-  module 𝓑 = family-of-reflexive-graphs 𝓐 𝓑
-
- field
-  push＠ : (a0 a1 : 𝓐.tp) (a01 : a0 𝓐.≈ a1) → 𝓑.tp a0 → 𝓑.tp a1
-
- push : {a0 a1 : 𝓐.tp} (a01 : a0 𝓐.≈ a1) → 𝓑.tp a0 → 𝓑.tp a1
- push = push＠ _ _
-
- field
-  push-rx : (a : 𝓐.tp) (b : 𝓑.tp a) → push (𝓐.rx a) b 𝓑.≈ b
-
- definitional-covariant-lens : oplax-covariant-lens 𝓐 𝓑
- push＠ definitional-covariant-lens a0 a1 a01 x = push a01 x
- push-rx definitional-covariant-lens a b = (push-rx a b)
-
--- oplonmonoid = make-oplax-covariant-lens monoidrg ?
+-- 𝒮ᴰ-Set : ∀ ℓ → DUARel (𝒮-Univ ℓ) (λ X → HSet ℓ) ℓ
+-- DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-Set ℓ) x e y = Σ (fst x ≃ fst y)
+--                                     (λ f → PathP (λ i → isSet (UARel.≅→≡ (𝒮-Univ ℓ) e i))
+--                                                 (transport (λ i → isSet {!(UARel.≅→≡ (𝒮-Univ ℓ) e i)!}) (snd x)) {!!})
+-- fst (DUARel.uaᴰ (𝒮ᴰ-Set ℓ) b p b') = {!!}
+-- snd (DUARel.uaᴰ (𝒮ᴰ-Set ℓ) b p b') = {!!}
