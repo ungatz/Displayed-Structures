@@ -9,6 +9,7 @@ open import Cubical.Foundations.Path
 open import Cubical.Foundations.Univalence
 open import Cubical.Foundations.Prelude
 open import Cubical.Foundations.HLevels
+open import Cubical.Foundations.Transport
 open import Cubical.Relation.Binary
 open import Cubical.Displayed.Base
 open import Cubical.Displayed.Subst
@@ -45,6 +46,9 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
 𝒮ᴰ-PtdSet ℓ .DUARel.uaᴰ a (e , tt*) b =
   invEquiv (compEquiv (PathP≃Path _ a b) (compPathlEquiv (sym (uaβ e a))))
 
+∫𝓢ᴰ-PtdSet : ∀ ℓ → UARel (Σ (Σ (Type ℓ) isSet) (λ X → fst X)) ℓ
+∫𝓢ᴰ-PtdSet ℓ = ∫ (𝒮ᴰ-PtdSet ℓ)
+
 𝒮ᴰ-const : ∀ {ℓA ℓ≅A ℓB ℓ≅B}
            {A : Type ℓA} (𝒮-A : UARel A ℓ≅A)
            {B : Type ℓB} (𝒮-B : UARel B ℓ≅B)
@@ -53,10 +57,13 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
 𝒮ᴰ-const 𝒮-A 𝒮-B .DUARel.uaᴰ b p b' = 𝒮-B .UARel.ua b b'
 
 𝒮ᴰ-Magma : ∀ ℓ → DUARel (∫𝓢ᴰ-Set ℓ) (λ X → (fst X) → (fst X) → (fst X)) ℓ
-DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-Magma ℓ) {a} ∘ₐ p ∘ₓ = ∀ (x y : fst a) →
-                                          fst (fst p) (∘ₐ x y) ≡
-                                          ∘ₓ ((fst (fst p)) x) ((fst (fst p)) y)
-DUARel.uaᴰ (𝒮ᴰ-Magma ℓ) = {!!}
+𝒮ᴰ-Magma ℓ .DUARel._≅ᴰ⟨_⟩_ {(A , _)} {(B , _)} ∘A (e , tt*) ∘B =
+  ∀ (x y : A) → equivFun e (∘A x y) ≡ ∘B (equivFun e x) (equivFun e y)
+𝒮ᴰ-Magma ℓ .DUARel.uaᴰ {(A , _)} {(B , _)} ∘A (e , tt*) ∘B =
+  invEquiv (compEquiv (PathP≃Path _ ∘A ∘B) {! !})
+
+∫𝓢ᴰ-Magma : ∀ ℓ → UARel (Σ (HSet ℓ) (λ (X , _) → X → X → X)) ℓ
+∫𝓢ᴰ-Magma ℓ = ∫ (𝒮ᴰ-Magma ℓ)
 
 _×ᴰ_ : ∀ {ℓA ℓ≅A ℓB ℓ≅B ℓC ℓ≅C}
        {A : Type ℓA} {𝒮-A : UARel A ℓ≅A}
@@ -68,38 +75,18 @@ _×ᴰ_ : ∀ {ℓA ℓ≅A ℓB ℓ≅B ℓC ℓ≅C}
   (𝒮ᴰ-B .DUARel._≅ᴰ⟨_⟩_ b e b') × (𝒮ᴰ-C .DUARel._≅ᴰ⟨_⟩_ c e c')
 (𝒮ᴰ-B ×ᴰ 𝒮ᴰ-C) .DUARel.uaᴰ (b , c) e (b' , c') = {!!}
 
-∫𝓢ᴰ-PtdSet : ∀ ℓ → UARel (Σ (Σ (Type ℓ) isSet) (λ X → fst X)) ℓ
-∫𝓢ᴰ-PtdSet ℓ = ∫ (𝒮ᴰ-PtdSet ℓ)
-
-∫𝓢ᴰ-Magma : ∀ ℓ → UARel (Σ (Σ (Type ℓ) isSet) (λ X → fst X → fst X → fst X)) ℓ
-∫𝓢ᴰ-Magma ℓ = ∫ (𝒮ᴰ-Magma ℓ)
-
-∫𝓢ᴰ-PtdSetMagma : ∀ ℓ → UARel (Σ (Σ (Type ℓ) isSet) (λ X → fst X × (fst X → fst X → fst X))) ℓ
+∫𝓢ᴰ-PtdSetMagma : ∀ ℓ → UARel (Σ (HSet ℓ) (λ (X , _) → X × (X → X → X))) ℓ
 ∫𝓢ᴰ-PtdSetMagma ℓ = ∫ ((𝒮ᴰ-PtdSet ℓ) ×ᴰ (𝒮ᴰ-Magma ℓ))
 
-𝒮ᴰ-Monoid' : ∀ ℓ → DUARel (∫𝓢ᴰ-PtdSetMagma ℓ)
-             (λ X → (∀ x → (snd (snd X) x (fst (snd X)) ≡ x) ×
-                           (snd (snd X) (fst (snd X)) x ≡ x)) ×
-                           (∀ x y z → snd (snd X) (snd (snd X) x y) z ≡ snd (snd X) x (snd (snd X) y z))) ℓ
-DUARel._≅ᴰ⟨_⟩_ (𝒮ᴰ-Monoid' ℓ) {X} {Y} m e n =
-  let
-    eₓ = fst e
-    e₊ = fst (snd e)
-    e∙ = snd (snd e)
-    in
-      (∀ x → PathP (λ i → {!e∙ ? ?!}) {!!} {!!}) ×
-      (∀ x → PathP (λ i → {!!}) {!!} {!!}) ×
-      (∀ x y z → PathP (λ i → {!!}) {!!} {!!})
-DUARel.uaᴰ (𝒮ᴰ-Monoid' ℓ) = {!!}
+𝒮ᴰ-Monoid' : ∀ ℓ → DUARel (∫𝓢ᴰ-PtdSetMagma ℓ) (λ ((X , _) , pt , op) →
+  ((∀ x → op x pt ≡ x) × (∀ x → op pt x ≡ x)) × (∀ x y z → op x (op y z) ≡ op (op x y) z)) ℓ
+𝒮ᴰ-Monoid' ℓ .DUARel._≅ᴰ⟨_⟩_ {((A , _) , ptA , opA)} {((B , _) , ptB , opB)} axA ((e , tt*) , (e-ptd , e-op)) axB = Unit*
+𝒮ᴰ-Monoid' ℓ .DUARel.uaᴰ {((A , isSetA) , _)} {((B , isSetB) , _)} ax1 _ ax2 = {! !}
 
 𝒮ᴰ-Monoid : ∀ ℓ → DUARel (∫𝓢ᴰ-Set ℓ)
-  (λ X → Σ[ ptd ∈ (λ Y → fst Y) X ]
-         Σ[ op ∈ (λ Y → (fst Y) → (fst Y) → (fst Y)) X ]
-         (∀ x → (op x ptd ≡ x) × (op ptd x ≡ x)) ×
-         (∀ x y z → op (op x y) z ≡ op x (op y z))) ℓ
-(𝒮ᴰ-Monoid ℓ DUARel.≅ᴰ⟨ x ⟩ x₁) x₂ = {!!}
+  (λ (X , _) → Σ[ pt ∈ X ]
+               Σ[ op ∈ (X → X → X) ]
+               (∀ x → (op x pt ≡ x) × (op pt x ≡ x)) ×
+               (∀ x y z → op (op x y) z ≡ op x (op y z))) ℓ
+𝒮ᴰ-Monoid ℓ .DUARel._≅ᴰ⟨_⟩_ {(A , _)} {(B , _)} (ptA , opA , axA) (e , tt*) (ptB , opB , axB) = {!!}
 DUARel.uaᴰ (𝒮ᴰ-Monoid ℓ) = {!!}
-
--- 𝒮-PtdSet : ∀ ℓ → DUARel (𝒮-Set ℓ) (λ X → fst X) (ℓ-suc ℓ)
--- (𝒮-PtdSet ℓ DUARel.≅ᴰ⟨ A ⟩ A≃B) B = transport {!A≃B!} {!!}
--- DUARel.uaᴰ (𝒮-PtdSet ℓ) = {!!}
