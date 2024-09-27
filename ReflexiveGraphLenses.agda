@@ -59,7 +59,8 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
 𝒮ᴰ-Magma ℓ .DUARel._≅ᴰ⟨_⟩_ {(A , _)} {(B , _)} ∘A (e , _) ∘B =
   ∀ (x y : A) → e (∘A x y) ≡ ∘B (e x) (e y)
 𝒮ᴰ-Magma ℓ .DUARel.uaᴰ {(A , _)} {(B , _)} ∘A e ∘B =
-  invEquiv (compEquiv (PathP≃Path _ ∘A ∘B) (compEquiv (invEquiv funExt₂Equiv) {! equivΠCod ? !}))
+  invEquiv (compEquiv (PathP≃Path _ ∘A ∘B) (compEquiv (invEquiv funExt₂Equiv)
+    (equivΠ (invEquiv e) (λ b → equivΠ (invEquiv e) (λ b' → {! !})))))
 
 ∫𝓢ᴰ-Magma : ∀ ℓ → UARel (Σ (hSet ℓ) (λ (X , _) → X → X → X)) ℓ
 ∫𝓢ᴰ-Magma ℓ = ∫ (𝒮ᴰ-Magma ℓ)
