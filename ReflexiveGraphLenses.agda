@@ -63,10 +63,22 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
                       (compEquiv (invEquiv funExt₂Equiv)
                                  (equivΠ (invEquiv e)
                                          (λ b → equivΠ (invEquiv e)
-                                                (λ b' → compEquiv
-                                                        (PathP≃Path _ {!!}
-                                                                      (∘B b b'))
-                                                        (pathToEquiv {!!}))))))
+                                                (λ b' → compEquiv (PathP≃Path _ _ _)
+                                                                  (compEquiv (compPathlEquiv (sym (transportRefl _)))
+                                                                             (compEquiv (compPathlEquiv (sym (transportRefl _)))
+                                                                                        (lem b b'))))))))
+  where
+  f : A → B
+  f = e .fst
+  g : B → A
+  g = invEquiv e .fst
+  cancel : (b : B) → f (g b) ≡ b
+  cancel b = equivToIso e .Iso.rightInv b
+  lem : (b b' : B) → (f (∘A (g (transport (λ _ → B) b)) (g (transport (λ _ → B) b'))) ≡ ∘B b b') ≃ (f (∘A (g b) (g b')) ≡ ∘B (f (g b)) (f (g b')))
+  lem b b' =
+    (f (∘A (g (transport (λ _ → B) b)) (g (transport (λ _ → B) b'))) ≡ ∘B b b') ≃⟨ compPathlEquiv (sym λ i → f (∘A (g (transportRefl b i)) (g (transportRefl b' i)))) ⟩
+    (f (∘A (g b) (g b')) ≡ ∘B b b') ≃⟨ compPathrEquiv (sym λ i → ∘B (cancel b i) (cancel b' i)) ⟩
+    (f (∘A (g b) (g b')) ≡ ∘B (f (g b)) (f (g b'))) ■
 
 ∫𝓢ᴰ-Magma : ∀ ℓ → UARel (Σ (hSet ℓ) (λ (X , _) → X → X → X)) ℓ
 ∫𝓢ᴰ-Magma ℓ = ∫ (𝒮ᴰ-Magma ℓ)
