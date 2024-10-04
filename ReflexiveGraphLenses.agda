@@ -83,6 +83,18 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
 ∫𝓢ᴰ-Magma : ∀ ℓ → UARel (Σ (hSet ℓ) (λ (X , _) → X → X → X)) ℓ
 ∫𝓢ᴰ-Magma ℓ = ∫ (𝒮ᴰ-Magma ℓ)
 
+RawSemiGroup : ∀ ℓ → Type (lsuc ℓ)
+RawSemiGroup ℓ = Σ[ (X , _) ∈ (hSet ℓ) ] (X → X → X)
+
+SemiGroupAxioms : ∀ ℓ → RawSemiGroup ℓ → Type ℓ
+SemiGroupAxioms ℓ ((X , _) , op) = ∀ x y z → op x (op y z) ≡ op (op x y) z
+
+𝓢ᴰ-SemiGroup : ∀ ℓ → DUARel (∫𝓢ᴰ-Magma ℓ) (SemiGroupAxioms ℓ) ℓ
+DUARel._≅ᴰ⟨_⟩_ (𝓢ᴰ-SemiGroup ℓ) {(A , _) , oA} {(B , _) , oB} ax (e , e-op) ax' = Unit*
+DUARel.uaᴰ (𝓢ᴰ-SemiGroup ℓ) {(A , isSetA) , oA} {(B , isSetB) , oB} ax M ax' =
+  invEquiv (isContr→≃Unit* (subst⁻ isContr (PathP≡Path _ _ _)
+    (isProp→isContrPath (isPropΠ3 (λ x y z →  isSetB _ _)) _ _)))
+
 ∫𝓢ᴰ-RawMonoid : ∀ ℓ → UARel (Σ (hSet ℓ) (λ (X , _) → X × (X → X → X))) ℓ
 ∫𝓢ᴰ-RawMonoid ℓ = ∫ ((𝒮ᴰ-PtdSet ℓ) ×𝒮ᴰ (𝒮ᴰ-Magma ℓ))
 
