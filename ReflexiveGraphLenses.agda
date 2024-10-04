@@ -104,17 +104,22 @@ RawMonoid ℓ = Σ[ (X , _) ∈ (hSet ℓ) ] X × (X → X → X)
 MonoidAxioms : ∀ ℓ → RawMonoid ℓ → Type ℓ
 MonoidAxioms ℓ ((X , _) , pt , op) = (∀ x → op x pt ≡ x) × (∀ x → op pt x ≡ x) × (∀ x y z → op x (op y z) ≡ op (op x y) z)
 
-𝒮ᴰ-Monoid' : ∀ ℓ → DUARel (∫𝓢ᴰ-RawMonoid ℓ) (MonoidAxioms ℓ) ℓ
-𝒮ᴰ-Monoid' ℓ .DUARel._≅ᴰ⟨_⟩_ {((A , _) , eA , ∘A)} {((B , _) , eB , ∘B)} axA (e , e-ptd , e-op) axB = Unit*
-𝒮ᴰ-Monoid' ℓ .DUARel.uaᴰ {((A , isSetA) , eA , ∘A)} {((B , isSetB) , eB , ∘B)} ax M ax' =
+𝒮ᴰ-Monoid : ∀ ℓ → DUARel (∫𝓢ᴰ-RawMonoid ℓ) (MonoidAxioms ℓ) ℓ
+𝒮ᴰ-Monoid ℓ .DUARel._≅ᴰ⟨_⟩_ {((A , _) , eA , ∘A)} {((B , _) , eB , ∘B)} axA (e , e-ptd , e-op) axB = Unit*
+𝒮ᴰ-Monoid ℓ .DUARel.uaᴰ {((A , isSetA) , eA , ∘A)} {((B , isSetB) , eB , ∘B)} ax M ax' =
   invEquiv (isContr→≃Unit* (subst⁻ isContr (PathP≡Path _ _ _)
-    (isProp→isContrPath (isProp×2 (isPropΠ (λ _ → isSetB _ _)) (isPropΠ (λ _ → isSetB _ _)) (isPropΠ3 λ x y z → isSetB _ _))
+    (isProp→isContrPath (isProp×2 (isPropΠ (λ _ → isSetB _ _)) (isPropΠ (λ _ → isSetB _ _)) (isPropΠ3 λ _ _ _ → isSetB _ _))
       _ _)))
 
-𝒮ᴰ-Monoid : ∀ ℓ → DUARel (𝒮-Set ℓ)
-  (λ (X , _) → Σ[ pt ∈ X ]
-               Σ[ op ∈ (X → X → X) ]
-               (∀ x → (op x pt ≡ x) × (op pt x ≡ x)) ×
-               (∀ x y z → op (op x y) z ≡ op x (op y z))) ℓ
-𝒮ᴰ-Monoid ℓ .DUARel._≅ᴰ⟨_⟩_ {(A , _)} {(B , _)} (ptA , opA , axA) e (ptB , opB , axB) = {!!}
-DUARel.uaᴰ (𝒮ᴰ-Monoid ℓ) = {!!}
+∫𝓢ᴰ-Monoid : ∀ ℓ → UARel (Σ[ X ∈ RawMonoid ℓ ] MonoidAxioms ℓ X) ℓ
+∫𝓢ᴰ-Monoid ℓ = ∫ (𝒮ᴰ-Monoid ℓ)
+
+Monoid : ∀ ℓ → Type (lsuc ℓ)
+Monoid ℓ = Σ[ X ∈ RawMonoid ℓ ] MonoidAxioms ℓ X
+
+MonoidEquiv : ∀ ℓ → (M M' : Monoid ℓ) → Type (lsuc ℓ)
+MonoidEquiv ℓ M@(((X , _) , (e , ∘)) , _) M'@(((X' , _) , (e' , ∘')) , _) =
+  Σ (X ≃ X') (λ (f , _) → Lift (f e ≡ e') × ∀ (x y : X) → f (∘ x y) ≡ ∘' (f x) (f y))
+
+MonoidUnivalence : ∀ ℓ → (M M' : Monoid ℓ) → MonoidEquiv ℓ M M' → M ≡ M'
+MonoidUnivalence ℓ M M' me = equivFun (∫𝓢ᴰ-Monoid ℓ .UARel.ua M M') ((fst me , lower (fst (snd me)) , snd (snd me)) , tt*)
