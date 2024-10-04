@@ -86,15 +86,18 @@ DUARel.uaᴰ (𝒮ᴰ-Set ℓ) x p y = invEquiv (isContr→≃Unit* (isProp→is
 ∫𝓢ᴰ-RawMonoid : ∀ ℓ → UARel (Σ (hSet ℓ) (λ (X , _) → X × (X → X → X))) ℓ
 ∫𝓢ᴰ-RawMonoid ℓ = ∫ ((𝒮ᴰ-PtdSet ℓ) ×𝒮ᴰ (𝒮ᴰ-Magma ℓ))
 
-MonoidAxioms : ∀ ℓ → (Σ[ (X , _) ∈ (hSet ℓ) ] X × (X → X → X)) → Type ℓ
+RawMonoid : ∀ ℓ → Type (lsuc ℓ)
+RawMonoid ℓ = Σ[ (X , _) ∈ (hSet ℓ) ] X × (X → X → X)
+
+MonoidAxioms : ∀ ℓ → RawMonoid ℓ → Type ℓ
 MonoidAxioms ℓ ((X , _) , pt , op) = (∀ x → op x pt ≡ x) × (∀ x → op pt x ≡ x) × (∀ x y z → op x (op y z) ≡ op (op x y) z)
 
 𝒮ᴰ-Monoid' : ∀ ℓ → DUARel (∫𝓢ᴰ-RawMonoid ℓ) (MonoidAxioms ℓ) ℓ
 𝒮ᴰ-Monoid' ℓ .DUARel._≅ᴰ⟨_⟩_ {((A , _) , eA , ∘A)} {((B , _) , eB , ∘B)} axA (e , e-ptd , e-op) axB = Unit*
-𝒮ᴰ-Monoid' ℓ .DUARel.uaᴰ {((A , isSetA) , eA , ∘A)} {((B , isSetB) , eB , ∘B)} (ax1 , ax2 , ax3) (e , e-ptd , e-op) (ax1' , ax2' , ax3') =
-  invEquiv (isContr→≃Unit* (isProp→isContrPathP
-    (λ i ax ax' → isProp× {! isPropΠ2 !} {! !} _ _) _ _))
-    -- (λ i → isProp× (isProp× (isPropΠ {!!}) (isPropΠ {!!})) (isPropΠ (λ x → isPropΠ (λ y → isPropΠ λ z → {!!})))) ax1 ax2))
+𝒮ᴰ-Monoid' ℓ .DUARel.uaᴰ {((A , isSetA) , eA , ∘A)} {((B , isSetB) , eB , ∘B)} ax M ax' =
+  invEquiv (isContr→≃Unit* (subst⁻ isContr (PathP≡Path _ _ _)
+    (isProp→isContrPath (isProp×2 (isPropΠ (λ _ → isSetB _ _)) (isPropΠ (λ _ → isSetB _ _)) (isPropΠ3 λ x y z → isSetB _ _))
+      _ _)))
 
 𝒮ᴰ-Monoid : ∀ ℓ → DUARel (𝒮-Set ℓ)
   (λ (X , _) → Σ[ pt ∈ X ]
