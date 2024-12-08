@@ -59,7 +59,7 @@ module BST where
   -- binary search tree
   data BinarySearchTree : Type where
     emptyTree : BinarySearchTree
-    tree : BinarySearchTree         -- left subtree
+    tree : (l : BinarySearchTree)   -- left subtree
          -> Key                     -- key in current node
          -> (r : BinarySearchTree)  -- right subtree
          -> BinarySearchTree
@@ -77,6 +77,10 @@ module BST where
   inorder : BinarySearchTree → List ℕ
   inorder emptyTree = []
   inorder (tree tl k tr) = inorder tl ++ [ k ] ++ inorder tr
+
+  preorder : BinarySearchTree → List ℕ
+  preorder emptyTree = []
+  preorder (tree tl k tr) = [ k ] ++ preorder tl ++ preorder tr
 
   open LST
   member? : Key → BinarySearchTree → Bool
@@ -154,6 +158,10 @@ module RBT where
   inorder : RedBlackTree → List ℕ
   inorder emptyRBT = []
   inorder (rbtree c tl k tr) = inorder tl ++ (k ∷ inorder tr)
+
+  preorder : RedBlackTree → List ℕ
+  preorder emptyRBT = []
+  preorder (rbtree c tl k tr) = [ k ] ++ preorder tl ++ preorder tr
 
   open LST
   member? : Key → RedBlackTree → Bool
@@ -248,7 +256,6 @@ module SetOf {A : Type} where
   open RBT renaming (inorder to inorderRBT ; insert to insertRBT ; union to unionRBT ; member? to memberRBT)
   open LST renaming (memberL? to memberLST)
 
-
   R : BinarySearchTree → List ℕ → Type
   R bst lst = ∀ x → memberBST x bst ≡ memberLST x lst
 
@@ -256,18 +263,17 @@ module SetOf {A : Type} where
   R' rbt lst = ∀ x → memberRBT x rbt ≡ memberLST x lst
 
   -- inorder flattening
-  φ : BinarySearchTree → List ℕ
-  φ = inorderBST
+  bst-to-lst : BinarySearchTree → List ℕ
+  bst-to-lst = inorderBST
 
-  φ' : RedBlackTree → List ℕ
-  φ' = inorderRBT
+  rbt-to-lst : RedBlackTree → List ℕ
+  rbt-to-lst = inorderRBT
 
-  ψ : List ℕ → BinarySearchTree
-  ψ = foldr (tree emptyTree) emptyTree
+  lst-to-bst : List ℕ → BinarySearchTree
+  lst-to-bst = foldr (tree emptyTree) emptyTree
 
-  -- this is no longer balanced (not using insertRBT)
-  ψ' : List ℕ → RedBlackTree
-  ψ' = foldr (rbtree Black emptyRBT) emptyRBT
+  lst-to-rbt : List ℕ → RedBlackTree
+  lst-to-rbt = foldr (rbtree Black emptyRBT) emptyRBT
 
   -- what do the above functions preserve?
   -- ordering?
@@ -276,68 +282,70 @@ module SetOf {A : Type} where
   -- ...
   -- they preserve R.
 
+  or-assoc' : ∀ b₁ b₂ b₃ → b₁ or (b₂ or b₃) ≡ b₂ or (b₁ or b₃)
+  or-assoc' b₁ b₂ b₃ =  b₁ or b₂ or b₃            ≡⟨ or-assoc b₁ b₂ b₃ ⟩
+                        (b₁ or b₂) or b₃          ≡⟨ cong (_or b₃) (or-comm b₁ b₂) ⟩
+                        (b₂ or b₁) or b₃          ≡⟨ sym (or-assoc b₂ b₁ b₃) ⟩
+                        b₂ or b₁ or b₃ ∎
+
   lem1 : ∀ x k l1 l2 → memberLST x (l1 ++ [ k ] ++ l2) ≡ (k == x) or (memberLST x l1) or (memberLST x l2)
   lem1 x k [] l2 = refl
-  lem1 x k (y ∷ ys) l2 = (y == x) or memberLST x (ys ++ k ∷ l2)                       ≡⟨ cong (_or_ (y == x)) (lem1 x k ys l2) ⟩
-                          (y == x) or (k == x) or memberLST x ys or memberLST x l2     ≡⟨ or-assoc (y == x) (k == x) (memberLST x ys or memberLST x l2) ⟩
-                         ((y == x) or (k == x)) or memberLST x ys or memberLST x l2   ≡⟨ cong (_or(memberLST x ys or memberLST x l2)) (or-comm (y == x) (k == x))  ⟩
-                         ((k == x) or (y == x)) or memberLST x ys or memberLST x l2   ≡⟨ or-assoc (k == x or y == x) (memberLST x ys) (memberLST x l2) ⟩
-                         (((k == x) or (y == x)) or memberLST x ys) or memberLST x l2 ≡⟨ sym (cong (_or(memberLST x l2)) (or-assoc (k == x) (y == x) (memberLST x ys))) ⟩
-                         ((k == x) or (y == x) or memberLST x ys) or memberLST x l2   ≡⟨ sym (or-assoc (k == x) (y == x or memberLST x ys) (memberLST x l2)) ⟩
-                         (k == x) or ((y == x) or memberLST x ys) or memberLST x l2   ∎
+  lem1 x k (y ∷ ys) l2 =
+    (y == x) or memberLST x (ys ++ k ∷ l2)                       ≡⟨ cong (_or_ (y == x)) (lem1 x k ys l2) ⟩
+    (y == x) or (k == x) or memberLST x ys or memberLST x l2     ≡⟨ or-assoc' (y == x) (k == x) (memberLST x ys or memberLST x l2) ⟩
+    (k == x) or (y == x) or memberLST x ys or memberLST x l2     ≡⟨ cong (k == x or_) (or-assoc (y == x) (memberLST x ys) (memberLST x l2)) ⟩
+    (k == x) or ((y == x) or memberLST x ys) or memberLST x l2   ∎
 
-  η : ∀ bst → R bst (φ bst)
-  η emptyTree x = refl
-  η (tree tl k tr) x = sym (lem1 x k (inorderBST tl) (inorderBST tr))
+  lem : ∀ ys → ys ≡ (inorderBST (foldr (tree emptyTree) emptyTree ys))
+  lem [] = refl
+  lem (y ∷ ys) = cong (y ∷_) (lem ys)
 
-  η' : ∀ rbt → R' rbt (φ' rbt)
-  η' emptyRBT x = refl
-  η' (rbtree _ tl k tr) x = sym (lem1 x k (inorderRBT tl) (inorderRBT tr))
-
-  lem2 : ∀ x ys → memberBST x (foldr (tree emptyTree) emptyTree ys) ≡ memberLST x (inorderBST (foldr (tree emptyTree) emptyTree ys))
-  lem2 x [] = refl
-  lem2 x (y ∷ ys) = refl
-
-  lem3 : ∀ x ls → memberLST x ls ≡ memberBST x (foldr (tree emptyTree) emptyTree ls)
-  lem3 x [] = refl
-  lem3 x (y ∷ ys) with y == x
+  lem3 : ∀ ls x → memberLST x ls ≡ memberBST x (foldr (tree emptyTree) emptyTree ls)
+  lem3 [] x = refl
+  lem3 (y ∷ ys) x with y == x
   ... | true = refl
-  ... | false = memberLST x ys                                                  ≡⟨ lem3 x ys ⟩
-                memberBST x (foldr (tree emptyTree) emptyTree ys)               ≡⟨ lem2 x ys ⟩
+  ... | false = memberLST x ys                                                  ≡⟨ cong (memberLST x) (lem ys) ⟩
                 memberLST x (inorderBST (foldr (tree emptyTree) emptyTree ys))  ∎
-
-  ε : ∀ lst → R (ψ lst) lst
-  ε ls x = sym (lem3 x ls)
 
   lem2' : ∀ x ys → memberRBT x (foldr (rbtree Black emptyRBT) emptyRBT ys) ≡ memberLST x (inorderRBT (foldr (rbtree Black emptyRBT) emptyRBT ys))
   lem2' x [] = refl
   lem2' x (y ∷ ys) = refl
 
-  lem3' : ∀ x ls → memberLST x ls ≡ memberRBT x (foldr (rbtree Black emptyRBT) emptyRBT ls)
-  lem3' x [] = refl
-  lem3' x (y ∷ ys) with y == x
+  lem3' : ∀ ls x → memberLST x ls ≡ memberRBT x (foldr (rbtree Black emptyRBT) emptyRBT ls)
+  lem3' [] x = refl
+  lem3' (y ∷ ys) x with y == x
   ... | true = refl
-  ... | false = memberLST x ys                                                  ≡⟨ lem3' x ys ⟩
+  ... | false = memberLST x ys                                                  ≡⟨ lem3' ys x ⟩
                 memberRBT x (foldr (rbtree Black emptyRBT) emptyRBT ys)         ≡⟨ lem2' x ys ⟩
                 memberLST x (inorderRBT (foldr (rbtree Black emptyRBT) emptyRBT ys))  ∎
 
-  ε' : ∀ lst → R' (ψ' lst) lst
-  ε' ls x = sym (lem3' x ls)
+  η : ∀ bst → R bst (bst-to-lst bst)
+  η emptyTree x = refl
+  η (tree tl k tr) x = sym (lem1 x k (inorderBST tl) (inorderBST tr))
 
+  η' : ∀ rbt → R' rbt (rbt-to-lst rbt)
+  η' emptyRBT x = refl
+  η' (rbtree _ tl k tr) x = sym (lem1 x k (inorderRBT tl) (inorderRBT tr))
+
+  ε : ∀ lst → R (lst-to-bst lst) lst
+  ε ls x = sym (lem3 ls x)
+
+  ε' : ∀ lst → R' (lst-to-rbt lst) lst
+  ε' ls x = sym (lem3' ls x)
 
   QuasiR : QuasiEquivRel _ _ lzero
   QuasiR .fst .fst = R
   QuasiR .fst .snd _ _ = isPropΠ λ x → isSetBool _ _
   QuasiR .snd .isQuasiEquivRel.zigzag r r' r'' a = (r a) ∙∙ sym (r' a) ∙∙ (r'' a)
-  QuasiR .snd .isQuasiEquivRel.fwd a = ∣ φ a , η a ∣₁
-  QuasiR .snd .isQuasiEquivRel.bwd b = ∣ ψ b , ε b ∣₁
+  QuasiR .snd .isQuasiEquivRel.fwd a = ∣ bst-to-lst a , η a ∣₁
+  QuasiR .snd .isQuasiEquivRel.bwd b = ∣ lst-to-bst b , ε b ∣₁
 
   QuasiR' : QuasiEquivRel _ _ lzero
   QuasiR' .fst .fst = R'
   QuasiR' .fst .snd _ _ = isPropΠ λ x → isSetBool _ _
   QuasiR' .snd .isQuasiEquivRel.zigzag r r' r'' a = (r a) ∙∙ sym (r' a) ∙∙ (r'' a)
-  QuasiR' .snd .isQuasiEquivRel.fwd a = ∣ φ' a , η' a ∣₁
-  QuasiR' .snd .isQuasiEquivRel.bwd b = ∣ ψ' b , ε' b ∣₁
+  QuasiR' .snd .isQuasiEquivRel.fwd a = ∣ rbt-to-lst a , η' a ∣₁
+  QuasiR' .snd .isQuasiEquivRel.bwd b = ∣ lst-to-rbt b , ε' b ∣₁
 
   module E = QER→Equiv QuasiR
   module E' = QER→Equiv QuasiR'
@@ -355,3 +363,44 @@ module SetOf {A : Type} where
 
   List/Rᴸ≃RBT/Rᴿ :  RBT/Rᴿ ≃ List/Rᴸ̂
   List/Rᴸ≃RBT/Rᴿ = E'.Thm
+
+  𝓡 : BinarySearchTree → RedBlackTree → Type₁
+  𝓡 bst rbt = ∀ lst → R bst lst ≡ R' rbt lst
+
+  φ : BinarySearchTree → RedBlackTree
+  φ bst = lst-to-rbt (bst-to-lst bst)
+
+  ψ : RedBlackTree → BinarySearchTree
+  ψ rbt = lst-to-bst (rbt-to-lst rbt)
+
+  lem4 : ∀ bst lst → ((x : ℕ) → memberBST x bst ≡ memberLST x lst) ≡ ((x : ℕ) → memberLST x (bst-to-lst bst) ≡ memberLST x lst)
+  lem4 bst lst = {!η bst!} ∙ {!ε lst!}
+
+  lem5 : ∀ bst lst → ((x : ℕ) → memberLST x (bst-to-lst bst) ≡ memberLST x lst) ≡ ((x : ℕ) → memberRBT x (φ bst) ≡ memberLST x lst)
+  lem5 bst lst = {!!}
+
+  epsilon : ∀ bst → 𝓡 bst (φ bst)
+  epsilon bst lst = ((x : ℕ) → memberBST x bst ≡ memberLST x lst) ≡⟨ lem4 bst lst ⟩
+                    (((x : ℕ) → memberLST x (bst-to-lst bst) ≡ memberLST x lst) ) ≡⟨ lem5 bst lst ⟩
+                    ((x : ℕ) → memberRBT x (φ bst) ≡ memberLST x lst) ∎
+
+  lem6 : ∀ rbt lst → ((x : ℕ) → memberBST x (foldr (tree emptyTree) emptyTree (inorderRBT rbt)) ≡ memberLST x lst)
+                      ≡
+                     ((x : ℕ) → memberLST x (inorderBST (foldr (tree emptyTree) emptyTree (inorderRBT rbt))) ≡ memberLST x lst)
+  lem6 emptyRBT lst = refl
+  lem6 (rbtree c tl k tr) lst = {!!}
+
+  lem7 : ∀ rbt lst → ((x : ℕ) → memberLST x (inorderBST (foldr (tree emptyTree) emptyTree (inorderRBT rbt))) ≡ memberLST x lst)
+                     ≡ ((x : ℕ) → memberLST x (inorderRBT rbt) ≡ memberLST x lst)
+  lem7 rbt lst = {!!}
+
+  eta : ∀ lst → 𝓡 (ψ lst) lst
+  eta rbt lst = ((x : ℕ) → memberBST x (foldr (tree emptyTree) emptyTree (inorderRBT rbt)) ≡ memberLST x lst) ≡⟨ lem6 rbt lst ⟩
+                (((x : ℕ) → memberLST x (inorderBST (foldr (tree emptyTree) emptyTree (inorderRBT rbt))) ≡ memberLST x lst)) ≡⟨ {!!} ⟩
+                ((x : ℕ) → memberLST x (inorderRBT rbt) ≡ memberLST x lst) ≡⟨ {!!} ⟩
+                ((x : ℕ) → memberRBT x rbt ≡ memberLST x lst) ∎
+
+-- compose to form a path.
+-- form an interface.
+-- prove stuff that inorder is sorted and ...
+-- get a function to check if a BST has the needed invariant
